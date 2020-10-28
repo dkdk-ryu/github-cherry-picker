@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+
+# Github Cherry-Picker 20201028
+# dkdk.ryu@samsung.com
+import argparse
+import os
+import subprocess
+
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, epilog='''
+ex)
+Pull-Request ID:
+%(prog)s 2118
+
+Commit ID(-c):
+%(prog)s -c 4082723e71b8317e35cbba6bf1c6403ebbf63369
+
+URL(-u):
+%(prog)s -u https://github.com/Samsung/TizenFX/pull/2118.patch
+
+Remote name(-r):
+%(prog)s -r upstream 2118
+%(prog)s -r upstream -c 4082723e71b8317e35cbba6bf1c6403ebbf63369
+%(prog)s -r upstream -u https://github.com/Samsung/TizenFX/pull/2118.patch
+%(prog)s -r upstream -u https://github.com/Samsung/TizenFX/commit/4082723e71b8317e35cbba6bf1c6403ebbf63369.patch''')
+
+parser.add_argument("input", type=str, help="Pull-Request ID(or CommitID, URL)")
+parser.add_argument("-r", "--remote", type=str, help="Remote repo name")
+parser.add_argument("-c", "--commit", action="store_true", help="Type commit ID when this option is enabled")
+parser.add_argument("-u", "--url", action="store_true", help="Type URL when this option is enabled")
+args = parser.parse_args()
+
+if args.remote:
+    repoURL = "remote." + args.remote + ".url"
+else:
+    repoURL = "remote.origin.url"
+
+# print(repoURL)
+
+ret = subprocess.check_output(["git", "config", "--get", repoURL])
+url = ret.decode()
+url = url[0:-1]
+# print(url)
+
+suffix = url[-4:]
+
+if suffix == ".git":
+    url = url[0:-4]
+print(url)
+
+fileName = "github-cherrypicker-temp.patch"
+
+if args.commit:
+    url = url + "/commit/" + args.input + ".patch"
+elif args.url:
+    url = args.input
+else :
+    url = url + "/pull/" + args.input +".patch"
+
+print(url)
+ret = os.system("wget " + url + " -O " + fileName)
+os.system("git am " + fileName)
+os.system("rm " + fileName)
